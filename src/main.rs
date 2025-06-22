@@ -88,7 +88,7 @@ struct KubeConfig {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let matches = Command::new("merge")
+    let matches = Command::new("kubemerge")
         .version("1.0")
         .about("Merges multiple kubeconfig YAML files into a single file")
         .arg(
