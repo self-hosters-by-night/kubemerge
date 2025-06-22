@@ -65,7 +65,7 @@ struct User {
     #[serde(skip_serializing_if = "Option::is_none")]
     password: Option<String>,
     #[serde(flatten)]
-    other: HashMap<String, serde_yaml::Value>,
+    other: HashMap<String, serde_yml::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -84,7 +84,7 @@ struct KubeConfig {
     users: Option<Vec<NamedUser>>,
     #[serde(rename = "current-context")]
     current_context: String,
-    preferences: HashMap<String, serde_yaml::Value>,
+    preferences: HashMap<String, serde_yml::Value>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -149,7 +149,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let merged_config = merge_kubeconfigs(&yaml_files)?;
 
     // Write merged config
-    let yaml_output = serde_yaml::to_string(&merged_config)?;
+    let yaml_output = serde_yml::to_string(&merged_config)?;
     fs::write(output_file, yaml_output)?;
 
     println!(
@@ -210,7 +210,7 @@ fn merge_kubeconfigs(files: &[String]) -> Result<KubeConfig, Box<dyn std::error:
         println!("Processing: {}", file_path);
 
         let content = fs::read_to_string(file_path)?;
-        let config: KubeConfig = serde_yaml::from_str(&content)
+        let config: KubeConfig = serde_yml::from_str(&content)
             .map_err(|e| format!("Failed to parse {}: {}", file_path, e))?;
 
         // Merge clusters
