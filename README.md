@@ -1,1 +1,1 @@
-# merge-kube-configs
+# merge-kubeconfigs
