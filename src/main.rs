@@ -1,3 +1,4 @@
+use chrono::Local;
 use clap::{Arg, Command};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -117,7 +118,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Arg::new("backup")
                 .short('b')
                 .long("backup")
-                .help("Create backup of existing output file")
+                .help("Create timestamped backup of existing output file")
                 .action(clap::ArgAction::SetTrue),
         )
         .get_matches();
@@ -126,9 +127,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let output_file = matches.get_one::<String>("output").unwrap();
     let create_backup = matches.get_flag("backup");
 
-    // Create backup if requested and file exists
+    // Create timestamped backup if requested and file exists
     if create_backup && Path::new(output_file).exists() {
-        let backup_name = format!("{}.backup", output_file);
+        let timestamp = Local::now().format("%Y%m%d-%H%M%S");
+        let backup_name = format!("{}-backup-{}", output_file, timestamp);
         fs::copy(output_file, &backup_name)?;
         println!("Created backup: {}", backup_name);
     }
