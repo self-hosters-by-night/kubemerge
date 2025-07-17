@@ -9,9 +9,8 @@ Simple CLI to merge multiple kubeconfigs.
 - Merges clusters, contexts, and users
 - Deduplicates entries by name
 - Uses first non-empty current-context found
-- Creates backup if requested
 - Outputs summary of merged resources
-- Backup functionality
+- Backups current kubeconfig
 
 ## Build
 
