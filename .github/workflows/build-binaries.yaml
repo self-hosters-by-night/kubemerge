@@ -13,7 +13,7 @@ env:
 
 jobs:
   build-binaries:
-    name: Build ${{ matrix.target }}
+    name: Build for ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
