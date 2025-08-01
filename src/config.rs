@@ -1,6 +1,29 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct KubeConfig {
+    #[serde(rename = "apiVersion")]
+    pub api_version: String,
+    pub kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clusters: Option<Vec<NamedCluster>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contexts: Option<Vec<NamedContext>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub users: Option<Vec<NamedUser>>,
+    #[serde(rename = "current-context", skip_serializing_if = "String::is_empty")]
+    pub current_context: String,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub preferences: HashMap<String, serde_yml::Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NamedCluster {
+    pub name: String,
+    pub cluster: Cluster,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Cluster {
     #[serde(
@@ -24,9 +47,9 @@ pub struct Cluster {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct NamedCluster {
+pub struct NamedContext {
     pub name: String,
-    pub cluster: Cluster,
+    pub context: Context,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -40,9 +63,9 @@ pub struct Context {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct NamedContext {
+pub struct NamedUser {
     pub name: String,
-    pub context: Context,
+    pub user: User,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -66,27 +89,4 @@ pub struct User {
     pub password: Option<String>,
     #[serde(flatten)]
     pub other: HashMap<String, serde_yml::Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct NamedUser {
-    pub name: String,
-    pub user: User,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct KubeConfig {
-    #[serde(rename = "apiVersion")]
-    pub api_version: String,
-    pub kind: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub clusters: Option<Vec<NamedCluster>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub contexts: Option<Vec<NamedContext>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub users: Option<Vec<NamedUser>>,
-    #[serde(rename = "current-context", skip_serializing_if = "String::is_empty")]
-    pub current_context: String,
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
-    pub preferences: HashMap<String, serde_yml::Value>,
 }

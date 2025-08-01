@@ -2,6 +2,7 @@ use crate::config::{KubeConfig, NamedCluster, NamedContext, NamedUser};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use tracing::{debug, error, info, warn};
 
 pub fn merge_kubeconfigs(files: &[PathBuf]) -> Result<KubeConfig, Box<dyn std::error::Error>> {
     let mut all_clusters = Vec::new();
@@ -12,13 +13,13 @@ pub fn merge_kubeconfigs(files: &[PathBuf]) -> Result<KubeConfig, Box<dyn std::e
     let mut processed_files = 0;
 
     for file_path in files {
-        println!("Processing: {}", file_path.display());
+        info!("Processing: {}", file_path.display());
 
         let content = fs::read_to_string(file_path)
             .map_err(|e| format!("Failed to read {}: {}", file_path.display(), e))?;
 
         if content.trim().is_empty() {
-            println!("  Skipping empty file");
+            debug!("Skipping empty file: {}", file_path.display());
             continue;
         }
 
@@ -34,7 +35,7 @@ pub fn merge_kubeconfigs(files: &[PathBuf]) -> Result<KubeConfig, Box<dyn std::e
 
         if current_context.is_empty() && !config.current_context.is_empty() {
             current_context = config.current_context;
-            println!("  Using current-context: {}", current_context);
+            info!("Using current-context: {}", current_context);
         }
 
         for (key, value) in config.preferences {
@@ -43,13 +44,14 @@ pub fn merge_kubeconfigs(files: &[PathBuf]) -> Result<KubeConfig, Box<dyn std::e
 
         if added_items > 0 {
             processed_files += 1;
-            println!("  Added {} items", added_items);
+            info!("Added {} items from {}", added_items, file_path.display());
         } else {
-            println!("  No new items added");
+            debug!("No new items added from {}", file_path.display());
         }
     }
 
     if processed_files == 0 {
+        error!("No valid kubeconfig files were processed");
         return Err("No valid kubeconfig files were processed".into());
     }
 
@@ -90,10 +92,11 @@ fn merge_config_items(
     if let Some(clusters) = &config.clusters {
         for cluster in clusters {
             if !all_clusters.iter().any(|c| c.name == cluster.name) {
+                debug!("Adding cluster: {}", cluster.name);
                 all_clusters.push(cluster.clone());
                 added_items += 1;
             } else {
-                println!("  Skipping duplicate cluster: {}", cluster.name);
+                debug!("Skipping duplicate cluster: {}", cluster.name);
             }
         }
     }
@@ -101,10 +104,11 @@ fn merge_config_items(
     if let Some(contexts) = &config.contexts {
         for context in contexts {
             if !all_contexts.iter().any(|c| c.name == context.name) {
+                debug!("Adding context: {}", context.name);
                 all_contexts.push(context.clone());
                 added_items += 1;
             } else {
-                println!("  Skipping duplicate context: {}", context.name);
+                debug!("Skipping duplicate context: {}", context.name);
             }
         }
     }
@@ -112,10 +116,11 @@ fn merge_config_items(
     if let Some(users) = &config.users {
         for user in users {
             if !all_users.iter().any(|u| u.name == user.name) {
+                debug!("Adding user: {}", user.name);
                 all_users.push(user.clone());
                 added_items += 1;
             } else {
-                println!("  Skipping duplicate user: {}", user.name);
+                debug!("Skipping duplicate user: {}", user.name);
             }
         }
     }
@@ -127,6 +132,10 @@ fn validate_config(config: &KubeConfig) -> Result<(), Box<dyn std::error::Error>
     if !config.current_context.is_empty() {
         if let Some(contexts) = &config.contexts {
             if !contexts.iter().any(|c| c.name == config.current_context) {
+                error!(
+                    "Current context '{}' not found in merged contexts",
+                    config.current_context
+                );
                 return Err(format!(
                     "Current context '{}' not found in merged contexts",
                     config.current_context
@@ -150,14 +159,14 @@ fn validate_config(config: &KubeConfig) -> Result<(), Box<dyn std::error::Error>
 
         for context in contexts {
             if !cluster_names.contains(&&context.context.cluster) {
-                println!(
-                    "Warning: Context '{}' references missing cluster '{}'",
+                warn!(
+                    "Context '{}' references missing cluster '{}'",
                     context.name, context.context.cluster
                 );
             }
             if !user_names.contains(&&context.context.user) {
-                println!(
-                    "Warning: Context '{}' references missing user '{}'",
+                warn!(
+                    "Context '{}' references missing user '{}'",
                     context.name, context.context.user
                 );
             }

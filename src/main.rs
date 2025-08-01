@@ -2,6 +2,8 @@ use clap::{Arg, Command};
 use std::env;
 use std::fs;
 use std::path::Path;
+use tracing::{debug, error, info};
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 mod config;
 mod merge;
@@ -10,7 +12,19 @@ mod utils;
 use merge::merge_kubeconfigs;
 use utils::{create_backup, find_yaml_files, print_summary};
 
+fn init_tracing() {
+    let subscriber = FmtSubscriber::builder()
+        .with_env_filter(
+            EnvFilter::from_default_env().add_directive("kubemerge=info".parse().unwrap()),
+        )
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    init_tracing();
+
     let home_dir = env::var("HOME")
         .or_else(|_| env::var("USERPROFILE"))
         .map_err(|_| "HOME or USERPROFILE environment variable not found")?;
@@ -48,7 +62,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let output_file = matches.get_one::<String>("output").unwrap();
     let exclude_patterns: Vec<&String> = matches.get_many("exclude").unwrap_or_default().collect();
 
+    debug!("Input directory: {}", input_dir);
+    debug!("Output file: {}", output_file);
+    debug!("Exclude patterns: {:?}", exclude_patterns);
+
     if !Path::new(input_dir).is_dir() {
+        error!("Input directory does not exist: {}", input_dir);
         return Err(format!("Input directory does not exist: {}", input_dir).into());
     }
 
@@ -57,24 +76,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if let Some(parent) = Path::new(output_file).parent() {
+        debug!("Creating parent directory: {}", parent.display());
         fs::create_dir_all(parent)?;
     }
 
     let yaml_files = find_yaml_files(input_dir, &exclude_patterns)?;
     if yaml_files.is_empty() {
+        error!("No kubeconfig YAML files found in {}", input_dir);
         return Err(format!("No kubeconfig YAML files found in {}", input_dir).into());
     }
 
-    println!("Found {} kubeconfig files:", yaml_files.len());
+    info!("Found {} kubeconfig files:", yaml_files.len());
     for file in &yaml_files {
-        println!("  - {}", file.display());
+        info!("  - {}", file.display());
     }
 
     let merged_config = merge_kubeconfigs(&yaml_files)?;
     let yaml_output = serde_yml::to_string(&merged_config)?;
     fs::write(output_file, yaml_output)?;
 
-    println!(
+    info!(
         "Successfully merged {} files into {}",
         yaml_files.len(),
         output_file
